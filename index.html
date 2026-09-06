@@ -173,6 +173,14 @@
   .stepper button:hover{background:var(--accent-soft)}
   .stepper span{min-width:64px;text-align:center;font-family:var(--mono);font-size:20px;font-weight:700}
   .quiz-score{color:var(--gold);font-size:18px;margin-top:10px;font-family:var(--mono);letter-spacing:1px}
+  .quiz-list{
+    display:flex;justify-content:center;gap:6px;flex-wrap:wrap;
+    margin:14px auto 0;max-width:860px;font-family:var(--mono);font-size:12px;
+  }
+  .quiz-list span{color:var(--dim);border:1px solid var(--border);border-radius:6px;padding:3px 7px}
+  .quiz-list span.done{color:var(--ok);border-color:rgba(52,211,153,.35)}
+  .quiz-list span.cur{color:var(--text);border-color:var(--accent);background:var(--accent-soft)}
+  .quiz-list span b{color:var(--err);font-weight:600}
 
   .practice-lower{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start}
   .keypad{
@@ -274,13 +282,13 @@
       <div class="seg" id="dur-seg"></div>
     </div>
     <div class="field" id="quiz-options" hidden>
-      <label>每组题数（共 2 轮 × 3 组）</label>
+      <label>每组笔数（共 2 轮 × 3 组）</label>
       <div class="stepper">
         <button id="qs-minus" title="减少">−</button>
-        <span id="qs-value">5</span>
+        <span id="qs-value">50</span>
         <button id="qs-plus" title="增加">＋</button>
       </div>
-      <p class="mode-desc">第一轮 3 组普通金额传票，第二轮 3 组收付混合传票：带 <b>−</b> 号的传票要先按小键盘 <b>−</b> 键再打数字。组内按错一键或提前回车，整组记 0 分；全对才能拿到该组满分。</p>
+      <p class="mode-desc">默认每组 <b>50</b> 笔（2–99 可调）：每打完一笔按 <b>+</b> 进入下一笔，一组全部打完按 <b>Enter</b> 提交。第一轮 3 组普通金额，第二轮 3 组收付混合传票：带 <b>−</b> 号的传票要先按小键盘 <b>−</b> 键再打数字。组内按错一键，整组记 0 分。</p>
     </div>
     <div class="start-row">
       <button id="start-btn" class="primary">开始练习</button>
@@ -307,7 +315,7 @@
         </table>
         <ul>
           <li>每录完一条按 <b>Enter</b> 提交，模拟柜面录入习惯。</li>
-          <li><b>闯关答题</b>：传票照打——第一轮 3 组普通金额，第二轮 3 组收付混合（<b>−</b> 号传票先按小键盘减号键）；组内按错一键或提前回车，整组记 0 分。</li>
+          <li><b>闯关答题</b>：每组 50 笔照打——打完一笔按 <b>+</b> 进下一笔，一组全部打完按 <b>Enter</b> 提交整组；第二轮含 − 号传票（先按减号键）；组内按错一键，整组记 0 分。</li>
           <li>按错不前进（正确键才会跳动），练习时宁慢勿错。</li>
           <li>按 <b>Esc</b> 可随时暂停；<b>提示音</b>能帮你发现错键。</li>
           <li>笔记本没有小键盘的话，建议外接一个数字键盘练习。</li>
@@ -341,6 +349,7 @@
       <div class="t-answer" id="t-answer" hidden></div>
       <div class="t-hint" id="t-hint"></div>
       <div class="t-preview" id="t-preview"></div>
+      <div class="quiz-list" id="quiz-list" hidden></div>
       <div class="ticket-list" id="ticket-list" hidden></div>
     </div>
 
@@ -418,7 +427,7 @@ const MODES = {
   account: { name:'账号 / 卡号', desc:'16 或 19 位长号码，4 位一组显示' },
   idcard : { name:'证件号码', desc:'18 位号码，练长串输入的耐力与节奏' },
   ticket : { name:'传票连加', desc:'每组 5 笔金额逐笔录入，最后录入合计' },
-  quiz   : { name:'闯关答题', desc:'传票照打闯关：第一轮 3 组普通金额，第二轮 3 组含 − 号收付传票；组内失误整组 0 分' },
+  quiz   : { name:'闯关答题', desc:'传票连打闯关：每组 50 笔照打，+ 进下一笔，Enter 提交整组；第二轮含 − 号收付传票；组内失误整组 0 分' },
 };
 const DURATIONS = [60, 180, 300];
 
@@ -511,7 +520,7 @@ const S = {
   phase: 'setup',                 // setup | countdown | running | interstitial | paused | result
   mode: 'amount',
   duration: 180,
-  quizGroupSize: 5,               // 闯关答题：每组题数
+  quizGroupSize: 50,              // 闯关答题：每组笔数（默认 50，2–99 可调）
   quiz: null,                     // 闯关答题进行时状态
   quizPlan: null,                 // 组间过场计划
   interTimer: null,
@@ -538,12 +547,15 @@ function loadNextTarget(){
   let target, label, preview;
   if (S.mode === 'quiz'){
     const q = S.quiz;
-    q.question = genQuestion(q.round);
+    if (!q.groupQuestions){
+      q.groupQuestions = Array.from({length: q.groupSize}, () => genQuestion(q.round));
+    }
+    q.question = q.groupQuestions[q.qIndex];
     S.target = q.question.ans;
     S.pos = 0;
-    S.label = `第 ${q.round} 轮 · ${q.round === 1 ? '加法' : '加减混合'} · 第 ${q.group + 1} 组 · 第 ${q.qIndex + 1}/${q.groupSize} 题`;
+    S.label = `第 ${q.round} 轮 · ${q.round === 1 ? '加法' : '加减混合'} · 第 ${q.group + 1} 组 · 第 ${q.qIndex + 1}/${q.groupSize} 笔`;
     S.preview = '';
-    renderTarget(); renderPreview(); renderKeyHint(); renderTicketList(); renderQuizProgress();
+    renderTarget(); renderPreview(); renderKeyHint(); renderTicketList(); renderQuizProgress(); renderQuizList();
     return;
   }
   if (S.mode === 'ticket'){
@@ -607,7 +619,7 @@ function renderQuizProgress(){
   if (S.mode !== 'quiz' || !S.quiz){ strip.hidden = true; return; }
   strip.hidden = false;
   const q = S.quiz;
-  $('#qp-round').textContent = `第 ${q.round} 轮 · ${q.round === 1 ? '纯加法' : '加减混合'}`;
+  $('#qp-round').textContent = `第 ${q.round} 轮 · ${q.round === 1 ? '加法' : '加减混合'}`;
   let chips = '';
   for (let i = 0; i < 3; i++){
     const g = q.groups[(q.round - 1) * 3 + i];
@@ -618,6 +630,15 @@ function renderQuizProgress(){
   }
   $('#qp-groups').innerHTML = chips;
   $('#qp-score').textContent = `得分 ${quizScore()} / ${6 * q.groupSize}`;
+}
+function renderQuizList(){
+  const box = $('#quiz-list');
+  if (S.mode !== 'quiz' || !S.quiz || !S.quiz.groupQuestions){ box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = S.quiz.groupQuestions.map((qq, i) => {
+    const cls = i < S.quiz.qIndex ? 'done' : i === S.quiz.qIndex ? 'cur' : '';
+    return `<span class="${cls}">${qq.neg ? '<b>− </b>' : ''}${qq.amount}</span>`;
+  }).join('');
 }
 function onQuizGroupDone(){
   const q = S.quiz;
@@ -662,6 +683,7 @@ function endInterstitial(){
   const q = S.quiz;
   q.round = plan.nextRound; q.group = plan.nextGroup;
   q.qIndex = 0; q.groupBroken = false; q.question = null;
+  q.groupQuestions = null;
   S.phase = 'running';
   loadNextTarget();
 }
@@ -703,7 +725,9 @@ function renderTarget(wrongFlash = false){
     });
     ansBox.hidden = true;
     $('#t-label').textContent = S.label;
-    $('#t-hint').textContent = S.pos >= S.target.length ? '✓ 按 Enter 提交' : '';
+    $('#t-hint').textContent = S.pos >= S.target.length
+      ? (S.quiz.qIndex >= S.quiz.groupSize - 1 ? '✓ 本组最后一笔 —— 按 Enter 提交整组' : '✓ 按 + 进入下一笔')
+      : '';
     return;
   }
   ansBox.hidden = true;
@@ -739,7 +763,10 @@ function renderTicketList(){
 }
 function keyAreaForNext(){
   if (!S.target) return null;
-  if (S.pos >= S.target.length) return 'enter';
+  if (S.pos >= S.target.length){
+    if (S.mode === 'quiz') return S.quiz.qIndex >= S.quiz.groupSize - 1 ? 'enter' : 'plus';
+    return 'enter';
+  }
   return CHAR_KEY[S.target[S.pos]] || null;
 }
 function renderKeyHint(){
@@ -749,7 +776,11 @@ function renderKeyHint(){
     keyEls[area].classList.add('next');
     const k = KEYS.find(x => x.area === area);
     $('#fh-key').textContent = k.label;
-    $('#fh-who').textContent = FINGER_NAME[k.finger] + '击键' + (S.pos >= S.target.length ? ' · 提交本条' : '');
+    $('#fh-who').textContent = FINGER_NAME[k.finger] + '击键' + (S.pos >= S.target.length
+      ? (S.mode === 'quiz'
+          ? (S.quiz.qIndex >= S.quiz.groupSize - 1 ? ' · 提交整组' : ' · 下一笔')
+          : ' · 提交本条')
+      : '');
   } else {
     $('#fh-key').textContent = '—';
     $('#fh-who').textContent = '下一个要按的键';
@@ -796,18 +827,44 @@ function handleChar(ch){
   }
   renderStats(); renderKeyHint();
 }
+function quizMistake(msg){
+  S.stats.lineErr++;
+  if (S.mode === 'quiz' && !S.quiz.groupBroken){
+    S.quiz.groupBroken = true;
+    renderQuizProgress();
+  }
+  sndErr(); shakeBoard();
+  $('#t-hint').textContent = msg;
+}
 function handleEnter(){
   flashKeyByCode('NumpadEnter');
+  if (S.mode === 'quiz'){
+    if (S.pos >= S.target.length && S.quiz.qIndex >= S.quiz.groupSize - 1){
+      onLineDone();               // 最后一笔完成 → Enter 提交整组
+    } else {
+      quizMistake(S.pos >= S.target.length
+        ? '本组还没打完 —— 请用 + 进入下一笔'
+        : '还没录完 —— 还差 ' + (S.target.length - S.pos) + ' 位');
+    }
+    return;
+  }
   if (S.pos >= S.target.length){
     onLineDone();
   } else {
     S.stats.lineErr++;
-    if (S.mode === 'quiz' && !S.quiz.groupBroken){
-      S.quiz.groupBroken = true;
-      renderQuizProgress();
-    }
     sndErr(); shakeBoard();
     $('#t-hint').textContent = '还没录完 —— 还差 ' + (S.target.length - S.pos) + ' 位';
+  }
+}
+function handlePlus(){
+  if (S.pos >= S.target.length){
+    if (S.quiz.qIndex >= S.quiz.groupSize - 1){
+      quizMistake('本组最后一笔 —— 请按 Enter 提交整组');
+      return;
+    }
+    onLineDone();                 // + → 进入下一笔
+  } else {
+    quizMistake('还没打完 —— 还差 ' + (S.target.length - S.pos) + ' 位');
   }
 }
 window.addEventListener('keydown', e => {
@@ -849,7 +906,11 @@ window.addEventListener('keydown', e => {
     } else {
       flashKeyByCode(c);        // 无需减号时不计错误
     }
-  } else if (c === 'NumpadAdd' || c === 'NumpadMultiply' || c === 'NumpadDivide' || c === 'NumLock'){
+  } else if (c === 'NumpadAdd'){
+    e.preventDefault();
+    flashKeyByCode(c);
+    if (S.mode === 'quiz') handlePlus();   // 答题模式：+ 进入下一笔
+  } else if (c === 'NumpadMultiply' || c === 'NumpadDivide' || c === 'NumLock'){
     e.preventDefault();
     flashKeyByCode(c);   // 运算符号不参与题目，不计错误
   } else if (c === 'Backspace'){
@@ -1069,9 +1130,9 @@ function renderModeSeg(){
   $('#mode-desc').textContent = '▸ ' + MODES[S.mode].desc;
 }
 function setQuizSize(n){
-  S.quizGroupSize = Math.min(20, Math.max(2, n));
+  S.quizGroupSize = Math.min(99, Math.max(2, n));
   $('#qs-value').textContent = S.quizGroupSize;
-  localStorage.setItem('numpad-quiz-size', String(S.quizGroupSize));
+  localStorage.setItem('numpad-quiz-size-v2', String(S.quizGroupSize));
 }
 function renderDurSeg(){
   const seg = $('#dur-seg');
@@ -1087,7 +1148,7 @@ function renderDurSeg(){
 
 /* ================= 初始化 ================= */
 buildKeypad();
-S.quizGroupSize = parseInt(localStorage.getItem('numpad-quiz-size'), 10) || 5;
+S.quizGroupSize = parseInt(localStorage.getItem('numpad-quiz-size-v2'), 10) || 50;
 setQuizSize(S.quizGroupSize);
 $('#qs-minus').onclick = () => setQuizSize(S.quizGroupSize - 1);
 $('#qs-plus').onclick = () => setQuizSize(S.quizGroupSize + 1);
