@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小键盘盲打练习 · 银行柜员数字录入训练</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⌨️</text></svg>">
+<style>
+  :root{
+    --bg:#0b1120;
+    --panel:#121a2e;
+    --panel2:#0e1526;
+    --border:#22304f;
+    --text:#e9eefc;
+    --muted:#8b98b8;
+    --dim:#5a6a92;
+    --accent:#5b8cff;
+    --accent-soft:rgba(91,140,255,.16);
+    --gold:#f0b429;
+    --ok:#34d399;
+    --err:#f87171;
+    --radius:16px;
+    --mono:'Cascadia Mono',Consolas,'JetBrains Mono','Courier New',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none!important}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(900px 420px at 70% -10%, rgba(91,140,255,.14), transparent 60%),
+      radial-gradient(700px 380px at 10% 110%, rgba(240,180,41,.08), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:system-ui,'Segoe UI','Microsoft YaHei',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:28px 20px 60px}
+
+  /* ---------- header ---------- */
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}
+  h1{font-size:30px;letter-spacing:1px}
+  h1 em{font-style:normal;color:var(--gold)}
+  .sub{color:var(--muted);margin-top:6px;font-size:14px}
+  .top-actions{display:flex;gap:10px;align-items:center}
+  .ghost-btn{
+    background:var(--panel);border:1px solid var(--border);color:var(--text);
+    padding:9px 14px;border-radius:10px;cursor:pointer;font-size:14px;transition:.15s;
+  }
+  .ghost-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .ghost-btn.danger:hover{border-color:var(--err);color:var(--err);background:rgba(248,113,113,.08)}
+  .warn-chip{
+    background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.5);
+    color:var(--err);padding:8px 12px;border-radius:10px;font-size:13px;
+  }
+
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--border);border-radius:var(--radius);
+    padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+
+  /* ---------- setup ---------- */
+  .field{margin-bottom:22px}
+  .field>label{display:block;color:var(--muted);font-size:13px;margin-bottom:10px;letter-spacing:1px}
+  .seg{display:flex;flex-wrap:wrap;gap:8px}
+  .seg button{
+    background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    padding:10px 16px;border-radius:10px;cursor:pointer;font-size:14px;transition:.15s;
+  }
+  .seg button:hover{border-color:var(--accent)}
+  .seg button.active{background:var(--accent-soft);border-color:var(--accent);color:#cfe0ff;font-weight:600}
+  .mode-desc{color:var(--dim);font-size:13px;margin-top:10px}
+
+  .start-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:6px 0 8px}
+  .primary{
+    background:linear-gradient(135deg,#5b8cff,#3f6ae0);border:none;color:#fff;
+    font-size:17px;font-weight:700;letter-spacing:4px;padding:14px 42px;border-radius:12px;
+    cursor:pointer;box-shadow:0 6px 18px rgba(63,106,224,.4);transition:.15s;
+  }
+  .primary:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(63,106,224,.5)}
+  .best{color:var(--gold);font-size:14px}
+
+  details.guide{margin-top:20px;border:1px solid var(--border);border-radius:12px;background:var(--panel2)}
+  details.guide summary{cursor:pointer;padding:14px 16px;color:var(--muted);font-size:14px;user-select:none}
+  details.guide summary:hover{color:var(--text)}
+  .guide-body{padding:0 18px 18px;font-size:14px;line-height:1.9;color:#c6d2ee}
+  .guide-body b{color:var(--text)}
+  .finger-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+  .finger-table td{padding:7px 10px;border:1px solid var(--border)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .f-index{background:#60a5fa}.f-middle{background:#34d399}.f-ring{background:#fbbf24}
+  .f-pinky{background:#f87171}.f-thumb{background:#a78bfa}
+  .guide-body ul{padding-left:20px}
+
+  .history{margin-top:20px}
+  .history h3{font-size:14px;color:var(--muted);margin-bottom:10px;letter-spacing:1px}
+  .history table{width:100%;border-collapse:collapse;font-size:13px}
+  .history th{color:var(--dim);font-weight:500;text-align:left;padding:6px 10px;border-bottom:1px solid var(--border)}
+  .history td{padding:7px 10px;border-bottom:1px solid rgba(34,48,79,.5);color:#c6d2ee}
+  .history td.mono{font-family:var(--mono)}
+  .empty-tip{color:var(--dim);font-size:13px;padding:6px 0}
+
+  /* ---------- practice ---------- */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .stat{
+    background:var(--panel2);border:1px solid var(--border);border-radius:12px;
+    padding:12px 14px;text-align:center;
+  }
+  .stat .k{display:block;color:var(--dim);font-size:12px;margin-bottom:6px;letter-spacing:1px}
+  .stat .v{font-family:var(--mono);font-size:24px;font-weight:700}
+  .stat .v.warn{color:var(--gold)}
+
+  .board{
+    background:var(--panel2);border:1px solid var(--border);border-radius:14px;
+    padding:26px 20px;text-align:center;margin-bottom:20px;position:relative;overflow:hidden;
+  }
+  .t-label{color:var(--muted);font-size:14px;letter-spacing:2px;margin-bottom:14px;min-height:20px}
+  .t-target{
+    font-family:var(--mono);font-weight:700;
+    font-size:clamp(38px,7vw,64px);letter-spacing:8px;line-height:1.2;
+    display:flex;justify-content:center;flex-wrap:wrap;min-height:1.3em;
+  }
+  .t-target .ch{color:var(--dim);transition:color .08s}
+  .t-target .ch.done{color:var(--ok)}
+  .t-target .ch.cur{color:#fff;border-bottom:3px solid var(--accent);animation:caret 1s step-end infinite}
+  .t-target .ch.cur.wrong-flash{color:var(--err);border-bottom-color:var(--err);animation:none}
+  .t-target .sp{width:.55em}
+  @keyframes caret{50%{border-bottom-color:transparent}}
+  .board.shake{animation:shake .3s}
+  @keyframes shake{
+    20%{transform:translateX(-8px)}40%{transform:translateX(8px)}
+    60%{transform:translateX(-5px)}80%{transform:translateX(5px)}
+  }
+  .board.line-ok{animation:okglow .45s}
+  @keyframes okglow{0%{box-shadow:0 0 0 3px var(--ok) inset}100%{box-shadow:none}}
+  .t-hint{color:var(--gold);font-size:15px;margin-top:14px;min-height:22px;letter-spacing:2px}
+  .t-preview{color:var(--dim);font-size:13px;margin-top:6px;min-height:18px;font-family:var(--mono);letter-spacing:2px}
+  .ticket-list{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:12px;font-family:var(--mono);font-size:14px}
+  .ticket-list span{color:var(--dim);border:1px solid var(--border);border-radius:8px;padding:4px 10px}
+  .ticket-list span.done{color:var(--ok);border-color:rgba(52,211,153,.4)}
+  .ticket-list span.cur{color:var(--text);border-color:var(--accent);background:var(--accent-soft)}
+
+  /* ---------- quiz 闯关答题 ---------- */
+  .quiz-strip{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    background:var(--panel2);border:1px solid var(--border);border-radius:12px;
+    padding:10px 16px;margin-bottom:16px;font-size:13px;color:var(--muted);
+  }
+  .qp-groups{display:flex;gap:6px}
+  .qp-groups i{
+    font-style:normal;font-family:var(--mono);font-size:12px;min-width:26px;height:22px;
+    padding:0 4px;display:inline-flex;align-items:center;justify-content:center;
+    border:1px solid var(--border);border-radius:6px;color:var(--dim);
+  }
+  .qp-groups i.cur{color:var(--text);border-color:var(--accent);background:var(--accent-soft)}
+  .qp-groups i.full{color:var(--ok);border-color:rgba(52,211,153,.45)}
+  .qp-groups i.zero{color:var(--err);border-color:rgba(248,113,113,.45)}
+  .qp-score{color:var(--gold);font-family:var(--mono)}
+  .t-answer{
+    font-family:var(--mono);font-weight:700;font-size:clamp(30px,5vw,44px);
+    letter-spacing:6px;min-height:1.3em;margin-top:12px;
+  }
+  .t-answer .ch.done{color:var(--accent)}
+  .t-answer .ch.cur{color:var(--text);border-bottom:3px solid var(--accent);animation:caret 1s step-end infinite}
+  .t-answer .ch.cur.wrong-flash{color:var(--err);border-bottom-color:var(--err);animation:none}
+  .q-expr{color:#f5d78a}
+  .q-sign{color:var(--err)}
+  .stepper{
+    display:inline-flex;align-items:center;border:1px solid var(--border);
+    border-radius:10px;overflow:hidden;background:var(--panel2);
+  }
+  .stepper button{background:transparent;border:none;color:var(--text);width:46px;height:42px;font-size:20px;cursor:pointer}
+  .stepper button:hover{background:var(--accent-soft)}
+  .stepper span{min-width:64px;text-align:center;font-family:var(--mono);font-size:20px;font-weight:700}
+  .quiz-score{color:var(--gold);font-size:18px;margin-top:10px;font-family:var(--mono);letter-spacing:1px}
+
+  .practice-lower{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start}
+  .keypad{
+    display:grid;gap:8px;
+    grid-template-areas:
+      "nl slash star minus"
+      "seven eight nine plus"
+      "four five six plus"
+      "one two three enter"
+      "zero zero dot enter";
+  }
+  .key{
+    position:relative;background:#16203a;border:1px solid #26355c;color:var(--text);
+    border-radius:12px;min-width:64px;height:56px;cursor:default;user-select:none;
+    font-family:var(--mono);font-size:21px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;transition:background .06s,transform .06s;
+  }
+  .key.small{font-size:13px;color:var(--muted);font-family:system-ui,'Segoe UI',sans-serif}
+  .key.mid{font-size:18px}
+  .key::after{
+    content:'';position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+    width:18px;height:3px;border-radius:2px;background:var(--fc,transparent);opacity:.85;
+  }
+  .key.pressed{background:var(--accent);transform:scale(.93);border-color:var(--accent)}
+  .key.next{animation:glow 1s ease-in-out infinite;border-color:var(--accent)}
+  @keyframes glow{
+    0%,100%{box-shadow:0 0 0 0 rgba(91,140,255,.0)}
+    50%{box-shadow:0 0 14px 2px rgba(91,140,255,.55)}
+  }
+  .side{display:flex;flex-direction:column;gap:14px}
+  .finger-hint{
+    background:var(--panel2);border:1px solid var(--border);border-radius:12px;
+    padding:16px;text-align:center;
+  }
+  .finger-hint .big{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--accent)}
+  .finger-hint .who{color:var(--muted);font-size:14px;margin-top:6px}
+  .legend{
+    background:var(--panel2);border:1px solid var(--border);border-radius:12px;
+    padding:14px 16px;font-size:13px;color:#c6d2ee;line-height:2;
+  }
+  .side .ghost-btn{text-align:center}
+
+  /* ---------- result ---------- */
+  .result-head{text-align:center;margin-bottom:24px}
+  .grade{
+    font-size:76px;font-weight:800;line-height:1.1;font-family:var(--mono);
+    display:inline-block;margin-bottom:6px;
+  }
+  .grade-label{color:var(--muted);font-size:15px;letter-spacing:3px}
+  .new-record{color:var(--gold);font-size:15px;margin-top:10px;letter-spacing:1px}
+  .r-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+  .result-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .r-note{text-align:center;color:var(--dim);font-size:13px;margin-top:16px}
+
+  /* ---------- overlay ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(7,10,20,.82);backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;z-index:50;
+  }
+  .overlay-text{
+    font-size:110px;font-weight:800;font-family:var(--mono);color:var(--accent);
+    text-align:center;text-shadow:0 0 40px rgba(91,140,255,.5);
+  }
+  .overlay-text.small{font-size:34px;letter-spacing:4px;color:var(--text);font-family:system-ui,'Segoe UI','Microsoft YaHei',sans-serif}
+
+  .foot{color:var(--dim);font-size:12px;text-align:center;margin-top:34px;line-height:1.9}
+
+  @media (max-width:760px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .r-stats{grid-template-columns:repeat(2,1fr)}
+    .practice-lower{grid-template-columns:1fr}
+    .keypad{justify-content:center}
+    .key{min-width:56px;height:50px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>⌨️ 小键盘<em>盲打</em>练习</h1>
+      <p class="sub">银行柜员 · 数字录入专项训练 —— 先求准，再求快</p>
+    </div>
+    <div class="top-actions">
+      <span id="numlock-warn" class="warn-chip" hidden>⚠️ NumLock 未开启</span>
+      <button id="sound-btn" class="ghost-btn" title="按键提示音">🔊 提示音</button>
+    </div>
+  </header>
+
+  <!-- ================= 设置页 ================= -->
+  <section id="setup" class="card">
+    <div class="field">
+      <label>练习模式</label>
+      <div class="seg" id="mode-seg"></div>
+      <p class="mode-desc" id="mode-desc"></p>
+    </div>
+    <div class="field" id="dur-field">
+      <label>练习时长</label>
+      <div class="seg" id="dur-seg"></div>
+    </div>
+    <div class="field" id="quiz-options" hidden>
+      <label>每组题数（共 2 轮 × 3 组）</label>
+      <div class="stepper">
+        <button id="qs-minus" title="减少">−</button>
+        <span id="qs-value">5</span>
+        <button id="qs-plus" title="增加">＋</button>
+      </div>
+      <p class="mode-desc">第一轮 3 组普通金额传票，第二轮 3 组收付混合传票：带 <b>−</b> 号的传票要先按小键盘 <b>−</b> 键再打数字。组内按错一键或提前回车，整组记 0 分；全对才能拿到该组满分。</p>
+    </div>
+    <div class="start-row">
+      <button id="start-btn" class="primary">开始练习</button>
+      <div class="best" id="best-line">本模式最佳：—</div>
+    </div>
+
+    <details class="guide">
+      <summary>📖 指法教程 —— 盲打前先看这个</summary>
+      <div class="guide-body">
+        <p><b>基准键位：</b>右手食指、中指、无名指分别轻放在 <b>4、5、6</b> 上，拇指悬在 <b>0</b> 上方。不看键盘，凭位置感击键。</p>
+        <table class="finger-table">
+          <tr>
+            <td><span class="dot f-index"></span>食指</td><td class="mono">7 · 4 · 1</td>
+            <td><span class="dot f-middle"></span>中指</td><td class="mono">8 · 5 · 2</td>
+          </tr>
+          <tr>
+            <td><span class="dot f-ring"></span>无名指</td><td class="mono">9 · 6 · 3 · .</td>
+            <td><span class="dot f-pinky"></span>小指</td><td class="mono">+ − * / Enter</td>
+          </tr>
+          <tr>
+            <td><span class="dot f-thumb"></span>拇指</td><td class="mono">0</td>
+            <td colspan="2" style="color:var(--muted)">练熟后眼睛只看屏幕，绝不看键盘</td>
+          </tr>
+        </table>
+        <ul>
+          <li>每录完一条按 <b>Enter</b> 提交，模拟柜面录入习惯。</li>
+          <li><b>闯关答题</b>：传票照打——第一轮 3 组普通金额，第二轮 3 组收付混合（<b>−</b> 号传票先按小键盘减号键）；组内按错一键或提前回车，整组记 0 分。</li>
+          <li>按错不前进（正确键才会跳动），练习时宁慢勿错。</li>
+          <li>按 <b>Esc</b> 可随时暂停；<b>提示音</b>能帮你发现错键。</li>
+          <li>笔记本没有小键盘的话，建议外接一个数字键盘练习。</li>
+        </ul>
+      </div>
+    </details>
+
+    <div class="history">
+      <h3>最近成绩</h3>
+      <div id="history-body"></div>
+    </div>
+  </section>
+
+  <!-- ================= 练习页 ================= -->
+  <section id="practice" class="card" hidden>
+    <div class="stats">
+      <div class="stat"><span class="k" id="st-time-k">剩余时间</span><span class="v" id="st-time">00:00</span></div>
+      <div class="stat"><span class="k">速度（键/分）</span><span class="v" id="st-kpm">0</span></div>
+      <div class="stat"><span class="k">正确率</span><span class="v" id="st-acc">100%</span></div>
+      <div class="stat"><span class="k" id="st-lines-k">完成条数</span><span class="v" id="st-lines">0</span></div>
+    </div>
+
+    <div class="board" id="board">
+      <div class="quiz-strip" id="quiz-progress" hidden>
+        <span id="qp-round"></span>
+        <span class="qp-groups" id="qp-groups"></span>
+        <span class="qp-score" id="qp-score"></span>
+      </div>
+      <div class="t-label" id="t-label"></div>
+      <div class="t-target" id="t-target"></div>
+      <div class="t-answer" id="t-answer" hidden></div>
+      <div class="t-hint" id="t-hint"></div>
+      <div class="t-preview" id="t-preview"></div>
+      <div class="ticket-list" id="ticket-list" hidden></div>
+    </div>
+
+    <div class="practice-lower">
+      <div class="keypad" id="keypad"></div>
+      <div class="side">
+        <div class="finger-hint">
+          <div class="big" id="fh-key">—</div>
+          <div class="who" id="fh-who">下一个要按的键</div>
+        </div>
+        <div class="legend">
+          <span class="dot f-index"></span>食指 7 4 1&nbsp;&nbsp;
+          <span class="dot f-middle"></span>中指 8 5 2<br>
+          <span class="dot f-ring"></span>无名指 9 6 3 .&nbsp;&nbsp;
+          <span class="dot f-pinky"></span>小指 符号/Enter<br>
+          <span class="dot f-thumb"></span>拇指 0
+        </div>
+        <button id="pause-btn" class="ghost-btn">⏸ 暂停（Esc）</button>
+        <button id="stop-btn" class="ghost-btn danger">⏹ 提前结束</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 结果页 ================= -->
+  <section id="result" class="card" hidden>
+    <div class="result-head">
+      <div class="grade" id="r-grade">A</div>
+      <div class="grade-label" id="r-grade-label">优秀</div>
+      <div class="new-record" id="r-record" hidden>🏆 新纪录！刷新了本模式最佳成绩</div>
+      <div class="quiz-score" id="r-score" hidden></div>
+    </div>
+    <div class="r-stats">
+      <div class="stat"><span class="k">速度</span><span class="v" id="r-kpm">0</span><span class="k">键/分（KPM）</span></div>
+      <div class="stat"><span class="k">换算</span><span class="v" id="r-kph">0</span><span class="k">键/时（KPH）</span></div>
+      <div class="stat"><span class="k">正确率</span><span class="v" id="r-acc">0%</span><span class="k">正确键 / 总击键</span></div>
+      <div class="stat"><span class="k" id="r-lines-k">完成条数</span><span class="v" id="r-lines">0</span><span class="k" id="r-lines-sub">条</span></div>
+      <div class="stat"><span class="k">错键次数</span><span class="v" id="r-wrong">0</span><span class="k">次</span></div>
+      <div class="stat"><span class="k">练习用时</span><span class="v" id="r-time">0:00</span><span class="k">分:秒</span></div>
+    </div>
+    <div class="result-actions">
+      <button id="again-btn" class="primary" style="letter-spacing:2px">再来一次</button>
+      <button id="back-btn" class="ghost-btn">返回设置</button>
+    </div>
+    <p class="r-note" id="r-note"></p>
+  </section>
+
+  <footer class="foot">
+    速度参考：熟练柜员约 120–160 键/分，数据录入岗普遍要求 10000 KPH（约 167 键/分）以上。<br>
+    成绩仅保存在本机浏览器中 · 练习时请使用键盘右侧的小键盘
+  </footer>
+</div>
+
+<div id="overlay" class="overlay" hidden>
+  <div id="overlay-text" class="overlay-text"></div>
+</div>
+
+<script>
+/* ================= 工具 ================= */
+const $ = s => document.querySelector(s);
+const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+function digitsStr(n){
+  let s = String(randInt(1, 9));
+  for (let i = 1; i < n; i++) s += randInt(0, 9);
+  return s;
+}
+function amountStr(minC, maxC){
+  return (randInt(minC, maxC) / 100).toFixed(2);
+}
+function fmtTime(sec){
+  sec = Math.max(0, Math.ceil(sec));
+  return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+}
+
+/* ================= 模式定义 ================= */
+const MODES = {
+  number : { name:'随机数字', desc:'4–6 位随机数字，练指法基本功' },
+  amount : { name:'金额录入', desc:'如 3847.26，两位小数，柜面最常用' },
+  account: { name:'账号 / 卡号', desc:'16 或 19 位长号码，4 位一组显示' },
+  idcard : { name:'证件号码', desc:'18 位号码，练长串输入的耐力与节奏' },
+  ticket : { name:'传票连加', desc:'每组 5 笔金额逐笔录入，最后录入合计' },
+  quiz   : { name:'闯关答题', desc:'传票照打闯关：第一轮 3 组普通金额，第二轮 3 组含 − 号收付传票；组内失误整组 0 分' },
+};
+const DURATIONS = [60, 180, 300];
+
+function genTarget(mode){
+  switch(mode){
+    case 'number':  return digitsStr(randInt(4, 6));
+    case 'amount':  return amountStr(100, 9999999);          // 1.00 ~ 99999.99
+    case 'account': return digitsStr(Math.random() < 0.5 ? 16 : 19);
+    case 'idcard':  return digitsStr(18);
+  }
+}
+function makeGroup(){
+  const entries = Array.from({length: 5}, () => amountStr(100, 999999));
+  const cents = entries.reduce((a, s) => a + Math.round(parseFloat(s) * 100), 0);
+  return { entries, sumText: (cents / 100).toFixed(2), idx: 0 };
+}
+/* 闯关答题题目：照打传票金额，无需心算；round 1 普通传票，round 2 收付混合（− 传票需先按减号键） */
+function genQuestion(round){
+  const amount = amountStr(100, 9999999);           // 1.00 ~ 99999.99
+  if (round === 1) return { amount, neg: false, ans: amount };
+  const neg = Math.random() < 0.5;
+  return { amount, neg, ans: neg ? '-' + amount : amount };
+}
+
+/* ================= 虚拟键盘 ================= */
+const KEYS = [
+  { area:'nl',    label:'NumLock', code:'NumLock',         finger:'pinky', cls:'small' },
+  { area:'slash', label:'/',       code:'NumpadDivide',    finger:'pinky', cls:'mid' },
+  { area:'star',  label:'*',       code:'NumpadMultiply',  finger:'pinky' },
+  { area:'minus', label:'-',       code:'NumpadSubtract',  finger:'pinky' },
+  { area:'seven', label:'7', ch:'7', finger:'index' },
+  { area:'eight', label:'8', ch:'8', finger:'middle' },
+  { area:'nine',  label:'9', ch:'9', finger:'ring' },
+  { area:'plus',  label:'+',       code:'NumpadAdd',       finger:'pinky' },
+  { area:'four',  label:'4', ch:'4', finger:'index' },
+  { area:'five',  label:'5', ch:'5', finger:'middle' },
+  { area:'six',   label:'6', ch:'6', finger:'ring' },
+  { area:'one',   label:'1', ch:'1', finger:'index' },
+  { area:'two',   label:'2', ch:'2', finger:'middle' },
+  { area:'three', label:'3', ch:'3', finger:'ring' },
+  { area:'enter', label:'Enter',   code:'NumpadEnter',     finger:'pinky', cls:'small' },
+  { area:'zero',  label:'0', ch:'0', finger:'thumb' },
+  { area:'dot',   label:'.', ch:'.', finger:'ring' },
+];
+const FINGER_NAME = { index:'食指', middle:'中指', ring:'无名指', pinky:'小指', thumb:'拇指' };
+const CHAR_KEY = {}; KEYS.forEach(k => { if (k.ch) CHAR_KEY[k.ch] = k.area; });
+const CODE_KEY = {}; KEYS.forEach(k => { if (k.code) CODE_KEY[k.code] = k.area; });
+['Digit0','Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8','Digit9'].forEach((c, i) => CODE_KEY[c] = CHAR_KEY[String(i)]);
+CODE_KEY['Period'] = 'dot';
+CODE_KEY['Minus'] = 'minus';
+CODE_KEY['Enter'] = 'enter';
+
+const keyEls = {};
+function buildKeypad(){
+  const pad = $('#keypad');
+  KEYS.forEach(k => {
+    const el = document.createElement('div');
+    el.className = 'key' + (k.cls ? ' ' + k.cls : '');
+    el.style.gridArea = k.area;
+    el.style.setProperty('--fc', `var(--f-${k.finger})`);
+    el.textContent = k.label;
+    el.title = FINGER_NAME[k.finger] + '击键';
+    pad.appendChild(el);
+    keyEls[k.area] = el;
+  });
+}
+
+/* ================= 声音 ================= */
+let audioCtx = null;
+let muted = localStorage.getItem('numpad-muted') === '1';
+function beep(freq, dur, type = 'sine', gain = 0.05){
+  if (muted) return;
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(gain, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur / 1000);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur / 1000);
+  }catch(e){}
+}
+const sndOk    = () => beep(1250, 45, 'sine', 0.04);
+const sndErr   = () => beep(190, 130, 'square', 0.05);
+const sndLine  = () => { beep(880, 70, 'sine', 0.05); setTimeout(() => beep(1320, 110, 'sine', 0.05), 80); };
+function renderSoundBtn(){ $('#sound-btn').textContent = muted ? '🔇 已静音' : '🔊 提示音'; }
+
+/* ================= 会话状态 ================= */
+const S = {
+  phase: 'setup',                 // setup | countdown | running | interstitial | paused | result
+  mode: 'amount',
+  duration: 180,
+  quizGroupSize: 5,               // 闯关答题：每组题数
+  quiz: null,                     // 闯关答题进行时状态
+  quizPlan: null,                 // 组间过场计划
+  interTimer: null,
+  target: '', label: '', preview: '',
+  pos: 0,
+  queue: [],
+  group: null,                    // 传票连加当前组
+  startTs: 0, pausedAccum: 0, pauseStart: 0,
+  stats: { keys:0, correct:0, wrong:0, lines:0, lineErr:0 },
+  timer: null,
+};
+
+function activeMs(){
+  if (S.phase === 'paused') return S.pauseStart - S.startTs - S.pausedAccum;
+  return Date.now() - S.startTs - S.pausedAccum;
+}
+function remainSec(){ return S.duration * 1000 - activeMs(); }
+
+/* ================= 目标装载 ================= */
+function ensureQueue(){
+  while (S.queue.length < 3) S.queue.push(genTarget(S.mode));
+}
+function loadNextTarget(){
+  let target, label, preview;
+  if (S.mode === 'quiz'){
+    const q = S.quiz;
+    q.question = genQuestion(q.round);
+    S.target = q.question.ans;
+    S.pos = 0;
+    S.label = `第 ${q.round} 轮 · ${q.round === 1 ? '加法' : '加减混合'} · 第 ${q.group + 1} 组 · 第 ${q.qIndex + 1}/${q.groupSize} 题`;
+    S.preview = '';
+    renderTarget(); renderPreview(); renderKeyHint(); renderTicketList(); renderQuizProgress();
+    return;
+  }
+  if (S.mode === 'ticket'){
+    if (!S.group) S.group = makeGroup();
+    const g = S.group;
+    if (g.idx < g.entries.length){
+      target = g.entries[g.idx];
+      label = `本组第 ${g.idx + 1} 笔 / 共 5 笔`;
+      preview = (g.idx + 1 < g.entries.length) ? g.entries[g.idx + 1] : `合计 ${g.sumText}`;
+    } else {
+      target = g.sumText;
+      label = '本组合计 = ?';
+      preview = '';
+    }
+  } else {
+    ensureQueue();
+    target = S.queue.shift();
+    ensureQueue();
+    label = MODES[S.mode].name;
+    preview = S.queue[0];
+  }
+  S.target = target; S.pos = 0; S.label = label; S.preview = preview;
+  renderTarget(); renderPreview(); renderKeyHint(); renderTicketList();
+}
+function onLineDone(){
+  S.stats.lines++;
+  if (S.mode === 'quiz'){
+    const q = S.quiz;
+    q.qIndex++;
+    q.question = null;
+    if (q.qIndex >= q.groupSize) onQuizGroupDone();
+    else loadNextTarget();
+    sndLine();
+    const board = $('#board');
+    board.classList.remove('line-ok'); void board.offsetWidth;
+    board.classList.add('line-ok');
+    renderStats();
+    return;
+  }
+  if (S.mode === 'ticket'){
+    const g = S.group;
+    if (g.idx < g.entries.length) g.idx++; else S.group = null;
+  }
+  sndLine();
+  const board = $('#board');
+  board.classList.remove('line-ok'); void board.offsetWidth;
+  board.classList.add('line-ok');
+  loadNextTarget();
+  renderStats();
+}
+
+/* ================= 闯关答题 ================= */
+function quizScore(){
+  return S.quiz.groups.filter(Boolean).reduce((a, g) => a + g.score, 0);
+}
+function quizMaxScore(){
+  return S.quiz.groups.filter(Boolean).length * S.quiz.groupSize;
+}
+function renderQuizProgress(){
+  const strip = $('#quiz-progress');
+  if (S.mode !== 'quiz' || !S.quiz){ strip.hidden = true; return; }
+  strip.hidden = false;
+  const q = S.quiz;
+  $('#qp-round').textContent = `第 ${q.round} 轮 · ${q.round === 1 ? '纯加法' : '加减混合'}`;
+  let chips = '';
+  for (let i = 0; i < 3; i++){
+    const g = q.groups[(q.round - 1) * 3 + i];
+    let cls = '', txt = i + 1;
+    if (g){ cls = g.broken ? 'zero' : 'full'; txt = g.broken ? '✗' : '✓'; }
+    else if (i === q.group){ cls = 'cur'; }
+    chips += `<i class="${cls}" title="第 ${i + 1} 组">${txt}</i>`;
+  }
+  $('#qp-groups').innerHTML = chips;
+  $('#qp-score').textContent = `得分 ${quizScore()} / ${6 * q.groupSize}`;
+}
+function onQuizGroupDone(){
+  const q = S.quiz;
+  const idx = (q.round - 1) * 3 + q.group;
+  const score = q.groupBroken ? 0 : q.groupSize;
+  q.groups[idx] = { score, broken: q.groupBroken };
+  renderQuizProgress();
+  const total = quizScore(), max = quizMaxScore();
+  let nextRound = q.round, nextGroup = q.group + 1, newRound = false, finished = false;
+  if (nextGroup >= 3){
+    nextGroup = 0; nextRound++; newRound = true;
+    if (nextRound > 2) finished = true;
+  }
+  S.quizPlan = { nextRound, nextGroup, newRound, finished };
+
+  let title, sub;
+  if (finished){
+    title = `🎉 全部完成 · 总分 ${total} / ${max}`;
+    sub = '按 Enter 查看成绩单';
+  } else if (newRound){
+    const roundScore = q.groups.slice((q.round - 1) * 3, q.round * 3).reduce((a, g) => a + g.score, 0);
+    title = `第 ${q.round} 轮完成 · 本轮得分 ${roundScore} / ${q.groupSize * 3}`;
+    sub = `即将进入第 ${nextRound} 轮 · ${nextRound === 2 ? '加减混合' : ''} —— 按 Enter 继续`;
+  } else {
+    title = `第 ${q.group + 1} 组 ${q.groupBroken ? '✗ 有失误 · 本组 0 分' : '✓ 全对 · 满分 +' + score + ' 分'}`;
+    sub = `当前总分 ${total} / ${6 * q.groupSize} —— 按 Enter 继续`;
+  }
+  const text = $('#overlay-text');
+  text.className = 'overlay-text small';
+  text.innerHTML = `${title}<br><span style="font-size:18px;color:var(--muted)">${sub}</span>`;
+  $('#overlay').hidden = false;
+  S.phase = 'interstitial';
+  clearTimeout(S.interTimer);
+  S.interTimer = setTimeout(endInterstitial, 2200);
+}
+function endInterstitial(){
+  if (S.phase !== 'interstitial') return;
+  clearTimeout(S.interTimer);
+  const plan = S.quizPlan;
+  $('#overlay').hidden = true;
+  if (plan.finished){ finish(); return; }
+  const q = S.quiz;
+  q.round = plan.nextRound; q.group = plan.nextGroup;
+  q.qIndex = 0; q.groupBroken = false; q.question = null;
+  S.phase = 'running';
+  loadNextTarget();
+}
+
+/* ================= 渲染 ================= */
+function displayStr(target){
+  if (S.mode !== 'account') return target;
+  let out = '';
+  for (let i = 0; i < target.length; i++){
+    if (i > 0 && i % 4 === 0) out += ' ';
+    out += target[i];
+  }
+  return out;
+}
+function renderTarget(wrongFlash = false){
+  const box = $('#t-target');
+  const ansBox = $('#t-answer');
+  if (S.mode === 'quiz'){
+    box.innerHTML = '';
+    const strip = document.createElement('span');
+    strip.className = 'q-expr';
+    box.appendChild(strip);
+    let disp = S.target, di = 0;
+    if (S.quiz.question && S.quiz.question.neg){
+      const sign = document.createElement('span');
+      sign.className = 'q-sign';
+      sign.textContent = '− ';
+      strip.appendChild(sign);
+      disp = S.target.slice(1);
+      di = 1;
+    }
+    [...disp].forEach(c => {
+      const sp = document.createElement('span');
+      sp.className = 'ch' + (di < S.pos ? ' done' : di === S.pos ? ' cur' : '');
+      if (wrongFlash && di === S.pos) sp.classList.add('wrong-flash');
+      sp.textContent = c;
+      strip.appendChild(sp);
+      di++;
+    });
+    ansBox.hidden = true;
+    $('#t-label').textContent = S.label;
+    $('#t-hint').textContent = S.pos >= S.target.length ? '✓ 按 Enter 提交' : '';
+    return;
+  }
+  ansBox.hidden = true;
+  box.innerHTML = '';
+  const disp = displayStr(S.target);
+  let di = 0;
+  [...disp].forEach(c => {
+    const sp = document.createElement('span');
+    if (c === ' '){ sp.className = 'sp'; sp.innerHTML = '&nbsp;'; }
+    else {
+      sp.className = 'ch' + (di < S.pos ? ' done' : di === S.pos ? ' cur' : '');
+      if (wrongFlash && di === S.pos) sp.classList.add('wrong-flash');
+      sp.textContent = c;
+      di++;
+    }
+    box.appendChild(sp);
+  });
+  $('#t-label').textContent = S.label;
+  $('#t-hint').textContent = S.pos >= S.target.length ? '✓ 录入完成 —— 按 Enter 提交' : '';
+}
+function renderPreview(){
+  $('#t-preview').textContent = S.preview ? '下一条：' + displayStr(S.preview) : '';
+}
+function renderTicketList(){
+  const box = $('#ticket-list');
+  if (S.mode !== 'ticket' || !S.group){ box.hidden = true; return; }
+  box.hidden = false;
+  const g = S.group;
+  box.innerHTML = g.entries.map((e, i) => {
+    const cls = i < g.idx ? 'done' : (g.idx < g.entries.length && i === g.idx ? 'cur' : '');
+    return `<span class="${cls}">${i < g.idx ? '✓ ' : ''}${e}</span>`;
+  }).join('') + (g.idx >= g.entries.length ? `<span class="cur">➜ 合计 ${g.sumText}</span>` : '');
+}
+function keyAreaForNext(){
+  if (!S.target) return null;
+  if (S.pos >= S.target.length) return 'enter';
+  return CHAR_KEY[S.target[S.pos]] || null;
+}
+function renderKeyHint(){
+  KEYS.forEach(k => keyEls[k.area].classList.remove('next'));
+  const area = keyAreaForNext();
+  if (area && S.phase === 'running'){
+    keyEls[area].classList.add('next');
+    const k = KEYS.find(x => x.area === area);
+    $('#fh-key').textContent = k.label;
+    $('#fh-who').textContent = FINGER_NAME[k.finger] + '击键' + (S.pos >= S.target.length ? ' · 提交本条' : '');
+  } else {
+    $('#fh-key').textContent = '—';
+    $('#fh-who').textContent = '下一个要按的键';
+  }
+}
+function flashKeyByCode(code){
+  const area = CODE_KEY[code];
+  if (!area) return;
+  const el = keyEls[area];
+  el.classList.add('pressed');
+  setTimeout(() => el.classList.remove('pressed'), 110);
+}
+function renderStats(){
+  const used = Math.min(activeMs(), S.mode === 'quiz' ? Infinity : S.duration * 1000) / 1000;
+  const kpm = used > 2 ? Math.round(S.stats.correct / (used / 60)) : 0;
+  $('#st-time').textContent = fmtTime(S.mode === 'quiz' ? used : remainSec() / 1000);
+  $('#st-kpm').textContent = kpm;
+  $('#st-acc').textContent = S.stats.keys ? (S.stats.correct / S.stats.keys * 100).toFixed(1) + '%' : '100%';
+  $('#st-lines').textContent = S.stats.lines;
+}
+function shakeBoard(){
+  const b = $('#board');
+  b.classList.remove('shake'); void b.offsetWidth;
+  b.classList.add('shake');
+}
+
+/* ================= 输入处理 ================= */
+function handleChar(ch){
+  S.stats.keys++;
+  if (ch === S.target[S.pos]){
+    S.stats.correct++;
+    S.pos++;
+    sndOk();
+    renderTarget();
+  } else {
+    S.stats.wrong++;
+    if (S.mode === 'quiz' && !S.quiz.groupBroken){
+      S.quiz.groupBroken = true;
+      renderQuizProgress();
+    }
+    sndErr();
+    renderTarget(true);
+    shakeBoard();
+  }
+  renderStats(); renderKeyHint();
+}
+function handleEnter(){
+  flashKeyByCode('NumpadEnter');
+  if (S.pos >= S.target.length){
+    onLineDone();
+  } else {
+    S.stats.lineErr++;
+    if (S.mode === 'quiz' && !S.quiz.groupBroken){
+      S.quiz.groupBroken = true;
+      renderQuizProgress();
+    }
+    sndErr(); shakeBoard();
+    $('#t-hint').textContent = '还没录完 —— 还差 ' + (S.target.length - S.pos) + ' 位';
+  }
+}
+window.addEventListener('keydown', e => {
+  // NumLock 检测（仅在按下小键盘键时检查，避免其它平台误报）
+  if (e.code && e.code.startsWith('Numpad') && e.getModifierState && typeof e.getModifierState('NumLock') === 'boolean'){
+    $('#numlock-warn').hidden = e.getModifierState('NumLock');
+  }
+  if (e.key === 'Escape' || e.code === 'Escape'){
+    if (S.phase === 'running' || S.phase === 'paused') togglePause();
+    return;
+  }
+  if (S.phase === 'interstitial'){
+    if (e.code === 'NumpadEnter' || e.code === 'Enter'){
+      e.preventDefault();
+      endInterstitial();
+    }
+    return;
+  }
+  if (S.phase !== 'running') return;
+  if (e.repeat) return;
+
+  const c = e.code;
+  if (/^Numpad[0-9]$/.test(c) || /^Digit[0-9]$/.test(c)){
+    e.preventDefault();
+    flashKeyByCode(c);
+    handleChar(c.slice(-1));
+  } else if (c === 'NumpadDecimal' || c === 'Period'){
+    e.preventDefault();
+    flashKeyByCode(c);
+    handleChar('.');
+  } else if (c === 'NumpadEnter' || c === 'Enter'){
+    e.preventDefault();
+    handleEnter();
+  } else if (c === 'NumpadSubtract' || c === 'Minus'){
+    e.preventDefault();
+    if (S.mode === 'quiz' && S.target[S.pos] === '-'){
+      flashKeyByCode(c);
+      handleChar('-');          // 减号传票：− 是答案的一部分
+    } else {
+      flashKeyByCode(c);        // 无需减号时不计错误
+    }
+  } else if (c === 'NumpadAdd' || c === 'NumpadMultiply' || c === 'NumpadDivide' || c === 'NumLock'){
+    e.preventDefault();
+    flashKeyByCode(c);   // 运算符号不参与题目，不计错误
+  } else if (c === 'Backspace'){
+    e.preventDefault();  // 严格模式：按错需按正确键，无需退格
+  }
+});
+
+/* ================= 计时 ================= */
+function startTimer(){
+  S.timer = setInterval(() => {
+    if (S.phase !== 'running') return;
+    renderStats();
+    if (S.mode !== 'quiz' && remainSec() <= 0) finish();
+  }, 200);
+}
+function stopTimer(){ clearInterval(S.timer); S.timer = null; }
+
+/* ================= 流程 ================= */
+function startSession(){
+  S.stats = { keys:0, correct:0, wrong:0, lines:0, lineErr:0 };
+  S.queue = []; S.group = null; S.pos = 0;
+  S.quiz = { round:1, group:0, qIndex:0, question:null, groupBroken:false, groups:[], groupSize: S.quizGroupSize };
+  renderQuizProgress();
+  const isQuiz = S.mode === 'quiz';
+  $('#st-time-k').textContent = isQuiz ? '用时' : '剩余时间';
+  $('#st-lines-k').textContent = isQuiz ? '完成题数' : '完成条数';
+  S.phase = 'countdown';
+  $('#setup').hidden = true;
+  $('#result').hidden = true;
+  $('#practice').hidden = false;
+  $('#st-time').textContent = S.mode === 'quiz' ? '00:00' : fmtTime(S.duration);
+  $('#st-kpm').textContent = '0'; $('#st-acc').textContent = '100%'; $('#st-lines').textContent = '0';
+  renderTarget(); renderKeyHint();
+
+  const overlay = $('#overlay'), text = $('#overlay-text');
+  overlay.hidden = false;
+  let n = 3;
+  const step = () => {
+    if (n > 0){
+      text.className = 'overlay-text';
+      text.textContent = n--;
+      beep(660, 120, 'sine', 0.05);
+      setTimeout(step, 650);
+    } else {
+      text.className = 'overlay-text small';
+      text.textContent = '开始！眼睛看屏幕 👀';
+      beep(990, 180, 'sine', 0.06);
+      setTimeout(() => { overlay.hidden = true; begin(); }, 700);
+    }
+  };
+  step();
+}
+function begin(){
+  S.startTs = Date.now(); S.pausedAccum = 0;
+  S.phase = 'running';
+  loadNextTarget();
+  renderStats();
+  startTimer();
+}
+function togglePause(){
+  const overlay = $('#overlay'), text = $('#overlay-text');
+  if (S.phase === 'running'){
+    S.phase = 'paused'; S.pauseStart = Date.now();
+    text.className = 'overlay-text small';
+    text.innerHTML = '⏸ 已暂停<br><span style="font-size:18px;color:var(--muted)">按 Esc 或点击继续</span>';
+    overlay.hidden = false;
+    $('#pause-btn').textContent = '▶ 继续（Esc）';
+    renderKeyHint();
+  } else if (S.phase === 'paused'){
+    S.pausedAccum += Date.now() - S.pauseStart;
+    S.phase = 'running';
+    overlay.hidden = true;
+    $('#pause-btn').textContent = '⏸ 暂停（Esc）';
+    renderStats(); renderKeyHint();
+  }
+}
+function finish(){
+  if (S.phase === 'result') return;
+  stopTimer();
+  S.phase = 'result';
+  $('#overlay').hidden = true;
+  $('#practice').hidden = true;
+  $('#result').hidden = false;
+
+  const isQuiz = S.mode === 'quiz';
+  const usedSec = (isQuiz ? activeMs() : Math.min(activeMs(), S.duration * 1000)) / 1000;
+  const kpm = usedSec > 2 ? Math.round(S.stats.correct / (usedSec / 60)) : 0;
+  const acc = S.stats.keys ? S.stats.correct / S.stats.keys * 100 : 0;
+
+  let score = 0, maxScore = 0, completedGroups = 0, fullGroups = 0;
+  if (isQuiz){
+    S.quiz.groups.forEach(g => {
+      if (g){ completedGroups++; score += g.score; maxScore += S.quiz.groupSize; if (!g.broken) fullGroups++; }
+    });
+  }
+
+  let grade, gLabel, gColor;
+  if (isQuiz){
+    const rate = maxScore ? score / maxScore : 0;
+    if (rate >= 0.999){ grade = 'S'; gLabel = '满分通关 · 无懈可击'; gColor = 'var(--gold)'; }
+    else if (rate >= 0.8){ grade = 'A'; gLabel = '优秀 · 离满分只差半步'; gColor = 'var(--ok)'; }
+    else if (rate >= 0.6){ grade = 'B'; gLabel = '良好 · 稳住节奏再冲'; gColor = 'var(--accent)'; }
+    else if (rate >= 0.4){ grade = 'C'; gLabel = '合格 · 提升准确率是关键'; gColor = '#c6d2ee'; }
+    else { grade = 'D'; gLabel = '继续加油 · 先求全对'; gColor = 'var(--muted)'; }
+  } else if (kpm >= 180 && acc >= 99){ grade = 'S'; gLabel = '宗师级 · 柜面就是你的主场'; gColor = 'var(--gold)'; }
+  else if (kpm >= 140 && acc >= 98){ grade = 'A'; gLabel = '优秀 · 已达熟练柜员水平'; gColor = 'var(--ok)'; }
+  else if (kpm >= 100 && acc >= 96){ grade = 'B'; gLabel = '良好 · 再快一步就是优秀'; gColor = 'var(--accent)'; }
+  else if (kpm >= 60 && acc >= 92){ grade = 'C'; gLabel = '合格 · 保持节奏继续练'; gColor = '#c6d2ee'; }
+  else { grade = 'D'; gLabel = '继续加油 · 先求准再求快'; gColor = 'var(--muted)'; }
+  const g = $('#r-grade');
+  g.textContent = grade; g.style.color = gColor;
+  $('#r-grade-label').textContent = gLabel;
+
+  $('#r-score').hidden = !isQuiz;
+  if (isQuiz){
+    $('#r-score').textContent = completedGroups
+      ? `得分 ${score} / ${maxScore} 分 · 全对 ${fullGroups} / ${completedGroups} 组`
+      : '未完成任何完整小组，不计分';
+    $('#r-lines-k').textContent = '完成题数';
+    $('#r-lines-sub').textContent = '题';
+  } else {
+    $('#r-lines-k').textContent = '完成条数';
+    $('#r-lines-sub').textContent = '条';
+  }
+
+  $('#r-kpm').textContent = kpm;
+  $('#r-kph').textContent = (kpm * 60).toLocaleString();
+  $('#r-acc').textContent = acc.toFixed(1) + '%';
+  $('#r-lines').textContent = S.stats.lines;
+  $('#r-wrong').textContent = S.stats.wrong + (S.stats.lineErr ? `（另有 ${S.stats.lineErr} 次提前回车）` : '');
+  $('#r-time').textContent = fmtTime(usedSec);
+
+  const prev = bestForMode(S.mode);
+  const prevRate = prev && prev.maxScore ? prev.score / prev.maxScore : 0;
+  const isRecord = isQuiz
+    ? !!prev && maxScore > 0 && score / maxScore > prevRate
+    : !!prev && acc >= 95 && kpm > prev.kpm;
+  $('#r-record').hidden = !isRecord;
+  const worthSaving = isQuiz ? completedGroups >= 1 : S.stats.lines >= 1;
+  if (worthSaving){
+    const rec = { t: Date.now(), mode: S.mode, kpm, acc: +acc.toFixed(1), lines: S.stats.lines };
+    if (isQuiz){ rec.score = score; rec.maxScore = maxScore; }
+    saveRecord(rec);
+  }
+  const prevText = prev
+    ? (isQuiz ? `${prev.score}/${prev.maxScore} 分` : `${prev.kpm} 键/分`)
+    : '';
+  $('#r-note').textContent = !prev
+    ? (isQuiz ? '完成第一次闯关后，这里会显示你的本模式最佳成绩' : '完成第一次练习后，这里会显示你的本模式最佳成绩')
+    : (isRecord ? `超越了之前的最佳 ${prevText}！` : `本模式历史最佳：${prevText}${isQuiz ? '' : '（正确率不低于 95% 才计入）'}`);
+  renderHistory(); renderBest();
+}
+function backToSetup(){
+  stopTimer();
+  S.phase = 'setup';
+  $('#result').hidden = true;
+  $('#practice').hidden = true;
+  $('#setup').hidden = false;
+  renderHistory(); renderBest();
+}
+
+/* ================= 历史记录 ================= */
+function loadHistory(){ try{ return JSON.parse(localStorage.getItem('numpad-history') || '[]'); }catch(e){ return []; } }
+function saveRecord(rec){
+  const h = loadHistory(); h.push(rec);
+  localStorage.setItem('numpad-history', JSON.stringify(h.slice(-50)));
+}
+function bestForMode(mode){
+  const ok = loadHistory().filter(r => r.mode === mode && (mode === 'quiz' || (r.acc >= 95 && r.kpm > 0)));
+  if (!ok.length) return null;
+  if (mode === 'quiz'){
+    const rate = r => r.maxScore ? r.score / r.maxScore : 0;
+    return ok.reduce((b, r) => (rate(r) > rate(b) || (rate(r) === rate(b) && r.score > b.score)) ? r : b);
+  }
+  return ok.reduce((b, r) => r.kpm > b.kpm ? r : b);
+}
+function renderBest(){
+  const b = bestForMode(S.mode);
+  if (!b){
+    $('#best-line').textContent = S.mode === 'quiz'
+      ? '本模式最佳：—（满分通关即可刷新）'
+      : '本模式最佳：—（正确率 ≥95% 的成绩计入最佳）';
+    return;
+  }
+  $('#best-line').textContent = S.mode === 'quiz'
+    ? `本模式最佳：${b.score}/${b.maxScore} 分`
+    : `本模式最佳：${b.kpm} 键/分`;
+}
+function renderHistory(){
+  const box = $('#history-body');
+  const h = loadHistory().slice().reverse().slice(0, 8);
+  if (!h.length){ box.innerHTML = '<p class="empty-tip">还没有记录，完成第一次练习吧</p>'; return; }
+  box.innerHTML = '<table><tr><th>时间</th><th>模式</th><th>速度</th><th>正确率</th><th>条数</th></tr>' +
+    h.map(r => {
+      const d = new Date(r.t);
+      const m = MODES[r.mode] ? MODES[r.mode].name : r.mode;
+      const speedCell = r.mode === 'quiz' ? `${r.score}/${r.maxScore} 分` : `${r.kpm} 键/分`;
+      return `<tr><td>${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</td>` +
+        `<td>${m}</td><td class="mono">${speedCell}</td><td class="mono">${r.acc}%</td><td class="mono">${r.lines}${r.mode === 'quiz' ? ' 题' : ''}</td></tr>`;
+    }).join('') + '</table>';
+}
+
+/* ================= 设置页交互 ================= */
+function renderModeSeg(){
+  const seg = $('#mode-seg');
+  seg.innerHTML = '';
+  Object.entries(MODES).forEach(([key, m]) => {
+    const b = document.createElement('button');
+    b.textContent = m.name;
+    b.className = key === S.mode ? 'active' : '';
+    b.onclick = () => { S.mode = key; renderModeSeg(); renderBest(); };
+    seg.appendChild(b);
+  });
+  const isQuiz = S.mode === 'quiz';
+  $('#dur-field').hidden = isQuiz;
+  $('#quiz-options').hidden = !isQuiz;
+  $('#mode-desc').textContent = '▸ ' + MODES[S.mode].desc;
+}
+function setQuizSize(n){
+  S.quizGroupSize = Math.min(20, Math.max(2, n));
+  $('#qs-value').textContent = S.quizGroupSize;
+  localStorage.setItem('numpad-quiz-size', String(S.quizGroupSize));
+}
+function renderDurSeg(){
+  const seg = $('#dur-seg');
+  seg.innerHTML = '';
+  DURATIONS.forEach(d => {
+    const b = document.createElement('button');
+    b.textContent = d < 60 ? d + '秒' : (d / 60) + ' 分钟';
+    b.className = d === S.duration ? 'active' : '';
+    b.onclick = () => { S.duration = d; renderDurSeg(); };
+    seg.appendChild(b);
+  });
+}
+
+/* ================= 初始化 ================= */
+buildKeypad();
+S.quizGroupSize = parseInt(localStorage.getItem('numpad-quiz-size'), 10) || 5;
+setQuizSize(S.quizGroupSize);
+$('#qs-minus').onclick = () => setQuizSize(S.quizGroupSize - 1);
+$('#qs-plus').onclick = () => setQuizSize(S.quizGroupSize + 1);
+renderModeSeg();
+renderDurSeg();
+renderBest();
+renderHistory();
+renderSoundBtn();
+$('#sound-btn').onclick = () => {
+  muted = !muted;
+  localStorage.setItem('numpad-muted', muted ? '1' : '0');
+  renderSoundBtn();
+};
+$('#start-btn').onclick = startSession;
+$('#again-btn').onclick = startSession;
+$('#back-btn').onclick = backToSetup;
+$('#pause-btn').onclick = togglePause;
+$('#stop-btn').onclick = () => { if (S.phase === 'running' || S.phase === 'paused') finish(); };
+$('#overlay').onclick = () => {
+  if (S.phase === 'paused') togglePause();
+  else if (S.phase === 'interstitial') endInterstitial();
+};
+</script>
+</body>
+</html>
