@@ -406,9 +406,6 @@ function digitsStr(n){
   for (let i = 1; i < n; i++) s += randInt(0, 9);
   return s;
 }
-function amountStr(minC, maxC){
-  return (randInt(minC, maxC) / 100).toFixed(2);
-}
 function fmtTime(sec){
   sec = Math.max(0, Math.ceil(sec));
   return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
@@ -417,7 +414,7 @@ function fmtTime(sec){
 /* ================= 模式定义 ================= */
 const MODES = {
   number : { name:'随机数字', desc:'4–6 位随机数字，练指法基本功' },
-  amount : { name:'金额录入', desc:'如 3847.26，两位小数，柜面最常用' },
+  amount : { name:'金额录入', desc:'如 3847，整数金额，柜面最常用' },
   account: { name:'账号 / 卡号', desc:'16 或 19 位长号码，4 位一组显示' },
   idcard : { name:'证件号码', desc:'18 位号码，练长串输入的耐力与节奏' },
   ticket : { name:'传票连加', desc:'每组 5 笔金额逐笔录入，最后录入合计' },
@@ -428,19 +425,19 @@ const DURATIONS = [60, 180, 300];
 function genTarget(mode){
   switch(mode){
     case 'number':  return digitsStr(randInt(4, 6));
-    case 'amount':  return amountStr(100, 9999999);          // 1.00 ~ 99999.99
+    case 'amount':  return String(randInt(10, 99999));       // 2 ~ 5 位整数金额
     case 'account': return digitsStr(Math.random() < 0.5 ? 16 : 19);
     case 'idcard':  return digitsStr(18);
   }
 }
 function makeGroup(){
-  const entries = Array.from({length: 5}, () => amountStr(100, 999999));
-  const cents = entries.reduce((a, s) => a + Math.round(parseFloat(s) * 100), 0);
-  return { entries, sumText: (cents / 100).toFixed(2), idx: 0 };
+  const entries = Array.from({length: 5}, () => String(randInt(100, 99999)));
+  const sum = entries.reduce((a, s) => a + Number(s), 0);
+  return { entries, sumText: String(sum), idx: 0 };
 }
-/* 闯关答题题目：照打传票金额，无需心算；round 1 普通传票，round 2 收付混合（− 传票需先按减号键） */
+/* 闯关答题题目：照打传票金额（整数），无需心算；round 1 普通传票，round 2 收付混合（− 传票需先按减号键） */
 function genQuestion(round){
-  const amount = amountStr(100, 9999999);           // 1.00 ~ 99999.99
+  const amount = String(randInt(100, 99999));       // 3 ~ 5 位整数金额
   if (round === 1) return { amount, neg: false, ans: amount };
   const neg = Math.random() < 0.5;
   return { amount, neg, ans: neg ? '-' + amount : amount };
